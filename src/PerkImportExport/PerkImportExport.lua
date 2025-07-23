@@ -1,6 +1,89 @@
 local addonName = "PerkImportExport"
 local PIE = {}
 
+-- Queue system
+local actionQueue = {}
+local queueFrame = CreateFrame("Frame")
+local queueTimer = 0
+local isProcessing = false
+
+-- Queue action types
+local ActionTypes = {
+    CLICK_PERK = "click_perk",
+    CLICK_TOGGLE = "click_toggle",
+    DELAY = "delay",
+    COMPLETE = "complete"
+}
+
+-- Add action to queue
+local function QueueAction(actionType, data)
+    table.insert(actionQueue, {
+        type = actionType,
+        data = data or {}
+    })
+end
+
+-- Process the action queue
+local function ProcessQueue(self, elapsed)
+    -- Process multiple actions per frame if possible
+    while #actionQueue > 0 do
+        local action = actionQueue[1]
+        
+        if action.type == ActionTypes.DELAY then
+            queueTimer = queueTimer + elapsed
+            if queueTimer >= action.data.duration then
+                table.remove(actionQueue, 1)
+                queueTimer = 0
+                -- Don't return - continue to next action
+            else
+                -- Delay not finished, exit and wait for next frame
+                return
+            end
+        else
+            -- Process non-delay action immediately
+            table.remove(actionQueue, 1)
+            
+            if action.type == ActionTypes.CLICK_PERK then
+                local frameName = "PerkMgrFrame-PerkLine-" .. action.data.position
+                local perkFrame = getglobal(frameName)
+                if perkFrame then
+                    perkFrame:Click()
+                end
+            elseif action.type == ActionTypes.CLICK_TOGGLE then
+                local toggleButton = getglobal("PerkMgrFrame-Toggle")
+                if toggleButton then
+                    toggleButton:Click()
+                end
+            elseif action.type == ActionTypes.COMPLETE then
+                print("Perk import completed! Made " .. action.data.changeCount .. " changes.")
+            end
+        end
+    end
+    
+    -- Queue is empty, stop processing
+    queueFrame:SetScript("OnUpdate", nil)
+    isProcessing = false
+end
+
+-- Start processing the queue
+local function StartQueue()
+    if isProcessing then
+        return
+    end
+    
+    isProcessing = true
+    queueTimer = 0
+    queueFrame:SetScript("OnUpdate", ProcessQueue)
+end
+
+-- Clear the queue
+local function ClearQueue()
+    actionQueue = {}
+    queueFrame:SetScript("OnUpdate", nil)
+    isProcessing = false
+    queueTimer = 0
+end
+
 -- Create export popup frame
 local exportFrame = nil
 
@@ -154,12 +237,15 @@ function PIE.ExportPerks()
     print("Export string: " .. exportString)
 end
 
--- Import function
+-- Import function with queue system
 function PIE.ImportPerks(importString)
     if not importString or importString == "" then
         print("Please provide a valid import string.")
         return
     end
+    
+    -- Clear any existing queue
+    ClearQueue()
     
     -- Parse import string
     local targetPerkIds = {}
@@ -214,55 +300,19 @@ function PIE.ImportPerks(importString)
         return
     end
     
-    -- Apply changes with minimal delays
-    local changeIndex = 1
-    local function ApplyNextChange()
-        if changeIndex > #allChanges then
-            print("Perk import completed! Made " .. #allChanges .. " changes.")
-            return
-        end
-        
-        local change = allChanges[changeIndex]
-        local frameName = "PerkMgrFrame-PerkLine-" .. change.position
-        local perkFrame = getglobal(frameName)
-        
-        if perkFrame then
-            -- Click the perk line first
-            perkFrame:Click()
-            
-            -- Minimal delay before clicking toggle (0.01s)
-            local timer = 0
-            local timerFrame = CreateFrame("Frame")
-            timerFrame:SetScript("OnUpdate", function(self, elapsed)
-                timer = timer + elapsed
-                if timer >= 0.01 then
-                    timerFrame:SetScript("OnUpdate", nil)
-                    local toggleButton = getglobal("PerkMgrFrame-Toggle")
-                    if toggleButton then
-                        toggleButton:Click()
-                    end
-                    
-                    changeIndex = changeIndex + 1
-                    -- Minimal delay before next change (0.01s)
-                    local nextTimer = 0
-                    local nextFrame = CreateFrame("Frame")
-                    nextFrame:SetScript("OnUpdate", function(self, elapsed)
-                        nextTimer = nextTimer + elapsed
-                        if nextTimer >= 0.01 then
-                            nextFrame:SetScript("OnUpdate", nil)
-                            ApplyNextChange()
-                        end
-                    end)
-                end
-            end)
-        else
-            changeIndex = changeIndex + 1
-            -- Skip to next immediately on error
-            ApplyNextChange()
-        end
+    -- Build the action queue
+    for _, change in ipairs(allChanges) do
+        QueueAction(ActionTypes.CLICK_PERK, {position = change.position})
+        QueueAction(ActionTypes.DELAY, {duration = 0.01})
+        QueueAction(ActionTypes.CLICK_TOGGLE, {})
+        QueueAction(ActionTypes.DELAY, {duration = 0.01})
     end
     
-    ApplyNextChange()
+    -- Add completion message
+    QueueAction(ActionTypes.COMPLETE, {changeCount = #allChanges})
+    
+    -- Start processing the queue
+    StartQueue()
 end
 
 -- Slash command handlers
@@ -294,7 +344,7 @@ local function InitializeAddon()
     SLASH_PERKHELP1 = "/perkhelp"
     SlashCmdList["PERKHELP"] = SlashPerkHelp
     
-    print("Perk Import/Export loaded. Type /perkhelp for commands.")
+    print("Perk Import/Export addon loaded. Type /perkhelp for commands.")
 end
 
 -- Create main frame for event handling
