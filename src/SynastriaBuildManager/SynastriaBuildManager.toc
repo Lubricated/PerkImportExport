@@ -1,6 +1,6 @@
 ## Interface: 30300
-## Title: Perk Import/Export
-## Notes: Import and export perk configurations
+## Title: Synastria Build Manager
+## Notes: import/export builds
 ## Version: 1.3
 ## Author: Namira + Claude lol
 

@@ -297,8 +297,6 @@ local function CreateBuildManagerFrame()
         buildManagerFrame.editBox:SetText(finalExport)
         buildManagerFrame.editBox:SetFocus()
         buildManagerFrame.editBox:HighlightText()
-        
-        print("Build exported to Build Manager text box!")
     end)
     
     -- Import button
