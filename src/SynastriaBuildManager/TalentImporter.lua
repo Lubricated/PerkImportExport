@@ -59,9 +59,6 @@ end
 
 -- Apply talents to current class using preview, then learn them
 local function ApplyTalentsToCurrentClass(talentTabs)
-    local currentClass = GetSelectedTalentClassIndex()
-    print("Applying talents to class " .. currentClass)
-    
     -- Clear current preview
     for tab = 1, GetNumTalentTabs() do
         for talent = 1, GetNumTalents(tab) do
@@ -83,13 +80,10 @@ local function ApplyTalentsToCurrentClass(talentTabs)
     
     -- Commit all preview talents at once
     LearnPreviewTalents()
-    print("Learned preview talents for class " .. currentClass)
 end
 
 -- Apply talents for single class
 local function ApplyTalentsToSingleClass(talentTabs)
-    print("Applying talents to single class")
-    
     -- Clear current preview
     for tab = 1, GetNumTalentTabs() do
         for talent = 1, GetNumTalents(tab) do
@@ -111,7 +105,6 @@ local function ApplyTalentsToSingleClass(talentTabs)
     
     -- Commit all preview talents at once
     LearnPreviewTalents()
-    print("Learned preview talents for single class")
 end
 
 -- Main import function
@@ -131,15 +124,13 @@ function ImportDualClassTalents(importString)
     end
     
     if not next(classData) then
-        print("Invalid import format!")
-        return
+        return false
     end
     
     if isDual then
         -- Dual class logic
         if not _G["PlayerClassTalentBtn1"] or not _G["PlayerClassTalentBtn2"] then
-            print("Could not load talent frame properly!")
-            return
+            return false
         end
         
         local originalClass = GetSelectedTalentClassIndex()
@@ -157,7 +148,6 @@ function ImportDualClassTalents(importString)
             if classData[currentClassName] then
                 local talentTabs = ParseCompressedTalents(classData[currentClassName], GetNumTalentTabs())
                 ApplyTalentsToCurrentClass(talentTabs)
-                print("Imported talents for " .. currentClassName)
                 imported = imported + 1
             end
         end
@@ -165,11 +155,7 @@ function ImportDualClassTalents(importString)
         -- Switch back to original class
         _G["PlayerClassTalentBtn" .. originalClass]:Click()
         
-        if imported > 0 then
-            print("Import complete!")
-        else
-            print("No matching classes found in import string!")
-        end
+        return imported > 0
     else
         -- Single class logic
         local _, playerClassName = UnitClass("player")
@@ -177,22 +163,9 @@ function ImportDualClassTalents(importString)
         if classData[playerClassName] then
             local talentTabs = ParseCompressedTalents(classData[playerClassName], GetNumTalentTabs())
             ApplyTalentsToSingleClass(talentTabs)
-            print("Imported talents for " .. playerClassName)
-            print("Import complete!")
+            return true
         else
-            print("No matching class found in import string!")
+            return false
         end
     end
 end
-
--- Slash command for testing
-SLASH_TIMPORT1 = "/timport"
-SlashCmdList["TIMPORT"] = function(msg)
-    if msg == "" then
-        print("Usage: /timport <talent_string>")
-        return
-    end
-    ImportDualClassTalents(msg)
-end
-
-print("Talent Importer loaded! Use /timport <string> to import.")

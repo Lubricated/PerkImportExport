@@ -68,7 +68,6 @@ function ExportDualClassTalents()
     if isDual then
         -- Dual class logic
         if not _G["PlayerClassTalentBtn1"] or not _G["PlayerClassTalentBtn2"] then
-            print("Could not load talent frame properly!")
             return nil
         end
         
@@ -106,26 +105,5 @@ function ExportDualClassTalents()
     -- Remove trailing newline
     exportString = exportString:gsub("\n$", "")
     
-    print("=== TALENT EXPORT ===")
-    print(exportString)
-    print("=== END EXPORT ===")
-    
     return exportString
 end
-
--- Slash command
-SLASH_TEXPORT1 = "/texport"
-SlashCmdList["TEXPORT"] = function()
-    -- Ensure talent frame is loaded
-    TalentFrame_LoadUI()
-    
-    -- Quick check that our buttons exist for dual class
-    if IsDualClass() and (not _G["PlayerClassTalentBtn1"] or not _G["PlayerClassTalentBtn2"]) then
-        print("Could not load talent frame properly!")
-        return
-    end
-    
-    ExportDualClassTalents()
-end
-
-print("Talent Exporter loaded! Use /texport with talent window open.")
