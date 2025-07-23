@@ -1,0 +1,7 @@
+## Interface: 30300
+## Title: Perk Import/Export
+## Notes: Import and export perk configurations
+## Version: 1.0
+## Author: Namira + Claude lol
+
+PerkImportExport.lua
