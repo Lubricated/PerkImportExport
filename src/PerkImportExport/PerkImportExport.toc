@@ -5,3 +5,6 @@
 ## Author: Namira + Claude lol
 
 PerkImportExport.lua
+TalentExporter.lua
+TalentImporter.lua
+TalentTester.lua
